@@ -159,7 +159,7 @@ platformManager.enabled.each { target ->
 
     DependencyKind.values().each { kind ->
         def dir = kind.getDirectory(loader)
-        if (dir != null) {
+        if (dir != null) { 
             String path = dependencyProcessor.resolveRelative(dir).canonicalPath
             rootProject.ext.set(kind.getPropertyName(target), path)
         }
