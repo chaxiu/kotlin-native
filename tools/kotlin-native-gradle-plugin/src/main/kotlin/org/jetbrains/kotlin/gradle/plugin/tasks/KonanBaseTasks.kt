@@ -24,12 +24,10 @@ import org.gradle.api.artifacts.Configuration
 import org.gradle.api.artifacts.PublishArtifact
 import org.gradle.api.attributes.Attribute
 import org.gradle.api.attributes.Usage
-import org.gradle.api.internal.artifacts.configurations.DefaultConfiguration
 import org.gradle.api.tasks.*
 import org.gradle.language.cpp.CppBinary
 import org.gradle.language.cpp.internal.NativeVariant
 import org.gradle.nativeplatform.Linkage
-import org.gradle.platform.base.Variant
 import org.gradle.util.ConfigureUtil
 import org.jetbrains.kotlin.gradle.plugin.*
 import org.jetbrains.kotlin.konan.target.HostManager
@@ -94,6 +92,7 @@ abstract class KonanArtifactTask: KonanTargetableTask(), KonanArtifactSpec {
             it.attribute(CppBinary.LINKAGE_ATTRIBUTE, Linkage.STATIC)
             it.attribute(CppBinary.OPTIMIZED_ATTRIBUTE, false)
             it.attribute(CppBinary.DEBUGGABLE_ATTRIBUTE, false)
+            it.attribute(Attribute.of("platform", String::class.java), target.name)
         }
 
         project.pluginManager.withPlugin("maven-publish") {
