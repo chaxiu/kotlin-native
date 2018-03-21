@@ -180,7 +180,7 @@ struct ArrayHeader;
 
 // Header of every object.
 struct ObjHeader {
-  const TypeInfo* type_info_;
+  TypeInfo* type_info_;
   container_offset_t container_offset_negative_;
 
   const TypeInfo* type_info() const {

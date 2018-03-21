@@ -38,9 +38,10 @@
 // Auto-adjust GC thresholds.
 #define GC_ERGONOMICS 1
 
-// TODO: ensure it it read-only.
+// TODO: ensure it is read-only.
 ContainerHeader ObjHeader::theStaticObjectsContainer = {
-  CONTAINER_TAG_PERMANENT | CONTAINER_TAG_INCREMENT
+  CONTAINER_TAG_PERMANENT | CONTAINER_TAG_INCREMENT,
+  0
 };
 
 namespace {
