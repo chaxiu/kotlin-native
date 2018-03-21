@@ -18,14 +18,58 @@ package konan.ref
 
 import konan.cinterop.COpaquePointer
 
-class WeakReference<T>(referent: T) {
-    private var pointer: COpaquePointer?
+/**
+ *   Theory of operations:
+ *
+ *  Weak references in Kotlin/Native are implemented in the following way. Whenever weak reference to an
+ * object is created, we atomically modify type info pointer in the object to point into a metaobject.
+ * This metaobject contains a strong reference to the counter object (instance of WeakReferenceCounter class).
+ * Every other weak reference contains a strong reference to the counter object.
+ *
+ *      [weak1]  [weak2]
+ *         \      /
+ *         V     V
+ *      --[Counter] <--
+ *     |               |
+ *     |               |
+ *      ->[Object] -> [Meta]
+ *
+ *   References from weak reference objects to the counter and from the metaobject to the counter are strong,
+ *  and from the counter to the object is nullably weak. So whenever an object dies, if it has a metaobject,
+ *  it is traversed to find a counter object, and atomically nullify reference to the object. Afterward, all attempts
+ *  to get the object would yield null.
+ */
+@ExportTypeInfo("theWeakReferenceCounterTypeInfo")
+internal class WeakReferenceCounter {
+    // Actual object pointer.
+    var pointer: COpaquePointer?
 
-    @SymbolName("Konan_WeakReference_get")
-    fun get() = getImpl() as T
+    @SymbolName("Konan_WeakReferenceCounter_get")
+    internal external fun get(): Any?
+}
 
-    @SymbolName("Konan_WeakReference_get")
-    external fun clear(): Unit
+@ExportForCppRuntime
+internal fun setWeakPointer(counter: WeakReferenceCounter, pointer: COpaquePointer?): Unit {
+    counter.pointer = pointer
+}
 
-    private fun getImpl()
+@ExportForCppRuntime
+internal fun getWeakPointer(counter: WeakReferenceCounter) = counter.pointer
+
+@SymbolName("Konan_WeakReference_getCounter")
+external private fun getCounter(referent: Any): WeakReferenceCounter
+
+class WeakReference<T> {
+    constructor(referent: T) {
+        if (referent == null) throw Error("Weak reference to null?")
+        pointer = getCounter(referent)
+    }
+
+    private var pointer: WeakReferenceCounter?
+
+    inline reified fun get() = pointer.get() as T?
+
+    fun clear() {
+        pointer = null
+    }
 }
