@@ -253,7 +253,7 @@ open class KonanExtension {
 }
 
 open class KonanSoftwareComponent(val project: ProjectInternal?): SoftwareComponentInternal, ComponentWithVariants {
-    private val usages =  mutableSetOf<UsageContext>()
+    private val usages = mutableSetOf<UsageContext>()
     override fun getUsages(): MutableSet<out UsageContext> = usages
 
     private val variants = mutableSetOf<SoftwareComponent>()
@@ -355,7 +355,6 @@ class KonanPlugin @Inject constructor(private val registry: ToolingModelBuilderR
                 container.all {
                     val buildingConfig = it
                     val artifactId = buildingConfig.name
-                    println(">>> software components: ${konanSoftwareComponent.variants.size}")
                     project.extensions.configure(PublishingExtension::class.java) {
                         it.publications.create(artifactId, MavenPublication::class.java) {
                             it.artifactId = artifactId
