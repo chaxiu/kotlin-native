@@ -314,7 +314,7 @@ private class DeclarationsGeneratorVisitor(override val context: Context) :
             "kobjref:" + qualifyInternalName(descriptor)
         }
         val instanceFieldRef = addGlobal(
-                symbolName, getLLVMType(descriptor.defaultType), isExported = isExported, threadLocal = true)
+                symbolName, getLLVMType(descriptor.defaultType), isExported = isExported, threadLocal = !descriptor.symbol.objectIsShared)
 
         LLVMSetInitializer(instanceFieldRef, kNullObjHeaderPtr)
 

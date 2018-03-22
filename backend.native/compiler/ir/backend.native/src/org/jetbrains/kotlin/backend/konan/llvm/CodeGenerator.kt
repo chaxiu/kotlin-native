@@ -56,7 +56,7 @@ internal class CodeGenerator(override val context: Context) : ContextUtils {
                     descriptor.objectInstanceFieldSymbolName,
                     llvmType,
                     origin = descriptor.llvmSymbolOrigin,
-                    threadLocal = true
+                    threadLocal = !descriptor.symbol.objectIsShared
             )
         }
         context.llvm.objects += llvmGlobal
