@@ -1105,6 +1105,9 @@ OBJ_GETTER(InitInstance,
 
 OBJ_GETTER(InitSharedInstance,
     ObjHeader** location, const TypeInfo* type_info, void (*ctor)(ObjHeader*)) {
+#if KONAN_NO_THREADS
+  return InitInstance(location, type_info, ctor);
+#else
   ObjHeader* initializing = reinterpret_cast<ObjHeader*>(1);
   ObjHeader* value;
 
@@ -1132,6 +1135,7 @@ OBJ_GETTER(InitSharedInstance,
     __sync_synchronize();
     throw;
   }
+#endif
 #endif
 }
 
