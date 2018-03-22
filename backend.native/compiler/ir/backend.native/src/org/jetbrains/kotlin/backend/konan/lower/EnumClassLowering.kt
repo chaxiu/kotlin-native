@@ -378,10 +378,8 @@ internal class EnumClassLowering(val context: Context) : ClassLoweringPass {
             val startOffset = irClass.startOffset
             val endOffset = irClass.endOffset
 
-            val symbol = IrAnonymousInitializerSymbolImpl(loweredEnum.implObject.descriptor)
-            val irBuilder = context.createIrBuilder(symbol, startOffset, endOffset)
-            return IrAnonymousInitializerImpl(startOffset, endOffset, DECLARATION_ORIGIN_ENUM, symbol).apply {
-                body = irBuilder.irBlockBody(irClass) {
+            return IrAnonymousInitializerImpl(startOffset, endOffset, DECLARATION_ORIGIN_ENUM, loweredEnum.implObject.descriptor).apply {
+                body = context.createIrBuilder(symbol, startOffset, endOffset).irBlockBody(irClass) {
                     val instances = irTemporary(irGetField(irGet(loweredEnum.implObject.thisReceiver!!.symbol), loweredEnum.valuesField.symbol))
                     enumEntries
                             .sortedBy { it.descriptor.name }
