@@ -68,6 +68,10 @@ OBJ_GETTER(getCachedBox, T value, KBox<T> cache[], T from) {
 
 extern "C" {
 
+bool inBooleanBoxCache(KByte value) {
+  return isInRange(value, BYTE_RANGE_FROM, BYTE_RANGE_TO);
+}
+
 bool inByteBoxCache(KByte value) {
   return isInRange(value, BYTE_RANGE_FROM, BYTE_RANGE_TO);
 }
