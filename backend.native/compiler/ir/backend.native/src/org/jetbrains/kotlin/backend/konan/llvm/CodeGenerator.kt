@@ -46,7 +46,7 @@ internal class CodeGenerator(override val context: Context) : ContextUtils {
     fun functionEntryPointAddress(descriptor: FunctionDescriptor) = descriptor.entryPointAddress.llvm
     fun functionHash(descriptor: FunctionDescriptor): LLVMValueRef = descriptor.functionName.localHash.llvm
 
-    fun getObjectInstanceStorage(descriptor: ClassDescriptor): LLVMValueRef {
+    fun getObjectInstanceStorage(descriptor: ClassDescriptor, shared: Boolean): LLVMValueRef {
         assert (!descriptor.isUnit())
         val llvmGlobal = if (!isExternal(descriptor)) {
             context.llvmDeclarations.forSingleton(descriptor).instanceFieldRef
@@ -56,10 +56,13 @@ internal class CodeGenerator(override val context: Context) : ContextUtils {
                     descriptor.objectInstanceFieldSymbolName,
                     llvmType,
                     origin = descriptor.llvmSymbolOrigin,
-                    threadLocal = !descriptor.symbol.objectIsShared
+                    threadLocal = !shared
             )
         }
-        context.llvm.objects += llvmGlobal
+        if (shared)
+            context.llvm.sharedObjects += llvmGlobal
+        else
+            context.llvm.objects += llvmGlobal
         return llvmGlobal
     }
 
@@ -594,7 +597,7 @@ internal class FunctionGenerationContext(val function: LLVMValueRef,
         }
 
         val args = mutableListOf<LLVMValueRef>()
-        val objectPtr = codegen.getObjectInstanceStorage(descriptor)
+        val objectPtr = codegen.getObjectInstanceStorage(descriptor, shared)
         args += objectPtr
         val bbCurrent = currentBlock
         val bbFirstCheck    = basicBlock(if (shared) "label_check_shadow" else "label_init", locationInfo)
