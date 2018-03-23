@@ -313,7 +313,7 @@ private class DeclarationsGeneratorVisitor(override val context: Context) :
         } else {
             "kobjref:" + qualifyInternalName(descriptor)
         }
-        val threadLocal = !descriptor.symbol.objectIsShared
+        val threadLocal = !(descriptor.symbol.objectIsShared && context.config.threadsAreAllowed)
         val instanceFieldRef = addGlobal(
                 symbolName, getLLVMType(descriptor.defaultType), isExported = isExported, threadLocal = threadLocal)
 
