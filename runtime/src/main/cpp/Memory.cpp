@@ -1124,10 +1124,12 @@ OBJ_GETTER(InitSharedInstance,
   __sync_synchronize();
 #if KONAN_NO_EXCEPTIONS
   ctor(object);
+  RuntimeAssert(object->container()->frozen(), "shared object must be frozen");
   return object;
 #else
   try {
     ctor(object);
+    RuntimeAssert(object->container()->frozen(), "shared object must be frozen");
     return object;
   } catch (...) {
     UpdateRef(OBJ_RESULT, nullptr);

@@ -396,7 +396,7 @@ internal class EnumClassLowering(val context: Context) : ClassLoweringPass {
                                 }
                             }
                     +irCall(this@EnumClassLowering.context.ir.symbols.freeze, listOf(arrayType)).apply {
-                        extensionReceiver = irGet(instances.symbol)
+                        extensionReceiver = irGet(loweredEnum.implObject.thisReceiver!!.symbol)
                     }
                 }
             }
