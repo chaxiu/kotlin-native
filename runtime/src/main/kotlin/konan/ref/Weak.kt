@@ -26,13 +26,13 @@ import konan.cinterop.COpaquePointer
  * This metaobject contains a strong reference to the counter object (instance of WeakReferenceCounter class).
  * Every other weak reference contains a strong reference to the counter object.
  *
- *      [weak1]  [weak2]
- *         \      /
- *         V     V
- *      --[Counter] <--
- *     |               |
- *     |               |
- *      ->[Object] -> [Meta]
+ *         [weak1]  [weak2]
+ *             \      /
+ *             V     V
+ *     .......[Counter] <----
+ *     .                     |
+ *     .                     |
+ *      ->[Object] -> [Meta]-
  *
  *   References from weak reference objects to the counter and from the metaobject to the counter are strong,
  *  and from the counter to the object is nullably weak. So whenever an object dies, if it has a metaobject,
@@ -42,19 +42,13 @@ import konan.cinterop.COpaquePointer
 @ExportTypeInfo("theWeakReferenceCounterTypeInfo")
 internal class WeakReferenceCounter {
     // Actual object pointer.
-    var pointer: COpaquePointer?
+    var referred: COpaquePointer? = null
+    // Spinlock taken when materializing or removing 'referred'.
+    var lock: Int = 0
 
     @SymbolName("Konan_WeakReferenceCounter_get")
     internal external fun get(): Any?
 }
-
-@ExportForCppRuntime
-internal fun setWeakPointer(counter: WeakReferenceCounter, pointer: COpaquePointer?): Unit {
-    counter.pointer = pointer
-}
-
-@ExportForCppRuntime
-internal fun getWeakPointer(counter: WeakReferenceCounter) = counter.pointer
 
 @SymbolName("Konan_WeakReference_getCounter")
 external private fun getCounter(referent: Any): WeakReferenceCounter

@@ -177,35 +177,36 @@ struct ContainerHeader {
 };
 
 struct ArrayHeader;
+struct MetaObjHeader;
+MetaObjHeader* createMetaObject(void** location);
 
 // Header of every object.
 struct ObjHeader {
-  TypeInfo* type_info_;
-  container_offset_t container_offset_negative_;
+  TypeInfo* typeInfo_;
+  container_offset_t containerOffsetNegative_;
 
   const TypeInfo* type_info() const {
-    // TODO: for moving collectors use meta-objects approach:
-    //  - store tag in lower bit TypeInfo, which marks if meta-object is in place
-    //  - when reading type_info_ check if it is unaligned
-    //  - if it is, pointer points to the MetaObject
-    //  - otherwise this is direct pointer to TypeInfo
-    // Meta-object allows storing additional data associated with some objects,
-    // such as stable hash code.
-    return type_info_;
+    return typeInfo_->typeInfo_;
   }
 
-  void set_type_info(const TypeInfo* type_info) {
-    type_info_ = type_info;
+  bool has_meta_object() const {
+    return typeInfo_ != typeInfo_->typeInfo_;
+  }
+
+
+  MetaObjHeader* meta_object() {
+      return has_meta_object() ?
+        reinterpret_cast<MetaObjHeader*>(typeInfo_) : createMetaObject(&typeInfo_);
   }
 
   static ContainerHeader theStaticObjectsContainer;
 
   ContainerHeader* container() const {
-    if (container_offset_negative_ == 0) {
+    if (containerOffsetNegative_ == 0) {
       return &theStaticObjectsContainer;
     } else {
       return reinterpret_cast<ContainerHeader*>(
-          reinterpret_cast<uintptr_t>(this) - container_offset_negative_);
+          reinterpret_cast<uintptr_t>(this) - containerOffsetNegative_);
     }
   }
 
@@ -220,22 +221,20 @@ struct ObjHeader {
 
 // Header of value type array objects. Keep layout in sync with that of object header.
 struct ArrayHeader {
-  const TypeInfo* type_info_;
-  container_offset_t container_offset_negative_;
+  const TypeInfo* typeInfo_;
+  container_offset_t containerOffsetNegative_;
 
   const TypeInfo* type_info() const {
-    // TODO: for moving collectors use meta-objects approach:
-    //  - store tag in lower bit TypeInfo, which marks if meta-object is in place
-    //  - when reading type_info_ check if it is unaligned
-    //  - if it is, pointer points to the MetaObject
-    //  - otherwise this is direct pointer to TypeInfo
-    // Meta-object allows storing additional data associated with some objects,
-    // such as stable hash code.
-    return type_info_;
+    return typeInfo_->typeInfo_;
   }
 
-  void set_type_info(const TypeInfo* type_info) {
-    type_info_ = type_info;
+  bool has_meta_object() const {
+      return typeInfo_ != typeInfo_->typeInfo_;
+  }
+
+  MetaObjHeader* meta_object() {
+      return has_meta_object() ?
+        reinterpret_cast<MetaObjHeader*>(typeInfo_) : createMetaObject(&typeInfo_);
   }
 
   ContainerHeader* container() const {
@@ -261,10 +260,10 @@ class Container {
   // Data where everything is being stored.
   ContainerHeader* header_;
 
-  void SetMeta(ObjHeader* obj, const TypeInfo* type_info) {
-    obj->container_offset_negative_ =
+  void SetHeader(ObjHeader* obj, const TypeInfo* type_info) {
+    obj->containerOffsetNegative_ =
         reinterpret_cast<uintptr_t>(obj) - reinterpret_cast<uintptr_t>(header_);
-    obj->set_type_info(type_info);
+    obj->typeInfo_ = type_info;
     RuntimeAssert(obj->container() == header_, "Placement must match");
   }
 };
@@ -340,10 +339,10 @@ class ArenaContainer {
 
   bool allocContainer(container_size_t minSize);
 
-  void setMeta(ObjHeader* obj, const TypeInfo* typeInfo) {
-    obj->container_offset_negative_ =
+  void setHeader(ObjHeader* obj, const TypeInfo* typeInfo) {
+    obj->containerOffsetNegative_ =
         reinterpret_cast<uintptr_t>(obj) - reinterpret_cast<uintptr_t>(currentChunk_->asHeader());
-    obj->set_type_info(typeInfo);
+    obj->typeInfo_ = typeInfo;
     RuntimeAssert(obj->container() == currentChunk_->asHeader(), "Placement must match");
   }
 
@@ -353,6 +352,21 @@ class ArenaContainer {
   ArrayHeader* slots_;
   uint32_t slotsCount_;
 };
+
+class MetaObjHeader {
+ public:
+    ObjHeader** counter_address() {
+       return &counter_;
+    }
+
+  private:
+    // Pointer to the type info. Must be first, to match ArrayHeader and ObjHeader layout.
+    TypeInfo* typeInfo_;
+
+    // Strong reference to the counter object.
+    ObjHeader* counter_;
+};
+
 
 #ifdef __cplusplus
 extern "C" {

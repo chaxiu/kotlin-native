@@ -46,6 +46,7 @@ struct FieldTableRecord {
 // constant.
 struct TypeInfo {
     // Pointer to the real type info, usually points to 'this', unless metaobject exists.
+    // Must be first, to match layout of MetaObjHeader.
     TypeInfo* real_;
     // Hash of the class name.
     ClassNameHash name_;

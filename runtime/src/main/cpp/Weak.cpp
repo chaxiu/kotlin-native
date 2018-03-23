@@ -13,45 +13,29 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
+#include "Memory.h"
 #include "Types.h"
-
-extern "C" void setWeakPointer(ObjHeader* counter, void* what);
-extern "C" void* getWeakPointer(ObjHeader* counter);
-
-
-class MetaObjHeader {
- public:
-    OBJ_GETTER0(counterObject) {
-       RETURN_OBJ(counterObject_);
-    }
-
-  private:
-    // Pointer to the type info. Must be first.
-    TypeInfo* typeInfo_;
-    // Other fields may make sense here.
-    ObjHeader* counterObject_;
-};
 
  // See Weak.kt for implementation details.
 OBJ_GETTER(Konan_WeakReference_getCounter, ObjHeader* referent) {
   // TODO: make concurrency friendly.
-  MetaObjHeader* meta = getOrMakeMeta(referent);
+  MetaObjHeader* meta = referent->meta_object();
   ObjHolder counterHolder;
-  meta->counterObject(counterHolder.slot());
+  UpdateRef(counterHolder.slot(), *meta->weak_counter_address());
   if (counterHolder.obj() == null) {
      AllocInstance(theWeakReferenceCounterTypeInfo, counterHolder.slot());
      ObjHeader* counter = counterHolder.obj();
      // Cast unneeded, just to emphasize we store object reference as void*.
-     setWeakReferenceCounter(counter, reinterpret_cast<void*>(referent));
-     UpdateRef(meta->counterObjectAddress(), counter);
-  } else {
-    UpdateRef(counterHolder.slot(), meta->counterObject());
+     setWeakPointer(counter, reinterpret_cast<void*>(referent));
+     UpdateRef(meta->weak_counter_address(), counter);
   }
   RETURN_OBJ(counterHolder.obj());
 }
 
 OBJ_GETTER(Konan_WeakReferenceCounter_get, ObjHeader* counter) {
     // TODO: this is a hack, make properly.
-    RETURN_OBJ(reinterpret_cast<ObjHeader*>(getWeakPointer()));
+#if KONAN_NO_THREADS
+#else
+#endif
+    RETURN_OBJ(*reinterpret_cast<ObjHeader**>(counter + 1));
 }

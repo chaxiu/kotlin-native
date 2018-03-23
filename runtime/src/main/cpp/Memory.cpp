@@ -797,6 +797,20 @@ inline size_t containerSize(const ContainerHeader* container) {
 
 }  // namespace
 
+MetaObjHeader* createMetaObject(void** location) {
+  MetaObjHeader* meta = konanConstructInstance<MetaObjHeader>();
+  const TypeInfo* typeInfo = reinterpret_cast<const TypeInfo*>(*location);
+  meta->typeInfo_ = typeInfo;
+#if KONAN_NO_THREADS
+  *location = meta;
+#else
+  void* old = __sync_val_compare_and_swap(location, typeInfo, meta);
+  // TODO: maybe CAS loop instead?
+  RuntimeAssert(old == typeInfo, "Racy metaobject update");
+#endif
+  return meta;
+}
+
 ContainerHeader* AllocContainer(size_t size) {
   auto state = memoryState;
 #if USE_GC
@@ -847,7 +861,7 @@ void ObjectContainer::Init(const TypeInfo* type_info) {
     // One object in this container.
     header_->setObjectCount(1);
      // header->refCount_ is zero initialized by AllocContainer().
-    SetMeta(GetPlace(), type_info);
+    SetHeader(GetPlace(), type_info);
     MEMORY_LOG("object at %p\n", GetPlace())
     OBJECT_ALLOC_EVENT(memoryState, type_info->instanceSize_, GetPlace())
   }
@@ -865,7 +879,7 @@ void ArrayContainer::Init(const TypeInfo* type_info, uint32_t elements) {
     header_->setObjectCount(1);
     // header->refCount_ is zero initialized by AllocContainer().
     GetPlace()->count_ = elements;
-    SetMeta(GetPlace()->obj(), type_info);
+    SetHeader(GetPlace()->obj(), type_info);
     MEMORY_LOG("array at %p\n", GetPlace())
     OBJECT_ALLOC_EVENT(
         memoryState, -type_info->instanceSize_ * elements, GetPlace()->obj())
@@ -947,7 +961,7 @@ ObjHeader* ArenaContainer::PlaceObject(const TypeInfo* type_info) {
   }
   OBJECT_ALLOC_EVENT(memoryState, type_info->instanceSize_, result)
   currentChunk_->asHeader()->incObjectCount();
-  setMeta(result, type_info);
+  setHeader(result, type_info);
   return result;
 }
 
@@ -960,7 +974,7 @@ ArrayHeader* ArenaContainer::PlaceArray(const TypeInfo* type_info, uint32_t coun
   }
   OBJECT_ALLOC_EVENT(memoryState, -type_info->instanceSize_ * count, result->obj())
   currentChunk_->asHeader()->incObjectCount();
-  setMeta(result->obj(), type_info);
+  setHeader(result->obj(), type_info);
   result->count_ = count;
   return result;
 }
@@ -988,13 +1002,13 @@ void ReleaseRefFromAssociatedObject(const ObjHeader* object) {
 extern "C" {
 
 MemoryState* InitMemory() {
-  RuntimeAssert(offsetof(ArrayHeader, type_info_)
+  RuntimeAssert(offsetof(ArrayHeader, typeInfo_)
                 ==
-                offsetof(ObjHeader,   type_info_),
+                offsetof(ObjHeader,   typeInfo_),
                 "Layout mismatch");
-  RuntimeAssert(offsetof(ArrayHeader, container_offset_negative_)
+  RuntimeAssert(offsetof(ArrayHeader, containerOffsetNegative_)
                 ==
-                offsetof(ObjHeader  , container_offset_negative_),
+                offsetof(ObjHeader  , containerOffsetNegative_),
                 "Layout mismatch");
   RuntimeAssert(sizeof(FrameOverlay) % sizeof(ObjHeader**) == 0, "Frame overlay should contain only pointers")
   RuntimeAssert(memoryState == nullptr, "memory state must be clear");
